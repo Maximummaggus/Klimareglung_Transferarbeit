@@ -6,6 +6,8 @@ import matplotlib.animation as animation
 from matplotlib import style
 import datetime
 import threading
+# source Virtuelle_Umgebung/bin/activate
+# pip install pyserial
 
 # Globale Variable für den Übertragungszustand
 is_transmitting = False
