@@ -1,0 +1,9 @@
+# Ignoriere alles
+*
+
+# Erlaube keine Verzeichnisse
+!*/
+
+# Aber behalte diese spezifischen Dateien
+!Daten_Auswertung_toggle.py
+!Pi_Transfer.ino
