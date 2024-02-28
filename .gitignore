@@ -7,8 +7,6 @@
 # Aber behalte das Verzeichnis Pi_Transfer und alles darin
 !Pi_Transfer/
 
-# Innerhalb von Pi_Transfer, ignoriere wieder alles...
-Pi_Transfer/*
 
 # ...außer der Pi_Transfer.ino Datei
 !Pi_Transfer/Pi_Transfer.ino
