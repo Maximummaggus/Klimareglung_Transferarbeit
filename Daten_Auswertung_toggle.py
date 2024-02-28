@@ -6,33 +6,44 @@ import matplotlib.animation as animation
 from matplotlib import style
 import datetime
 import threading
-# source Virtuelle_Umgebung/bin/activate
-# pip install pyserial
+import sys
 
 # Globale Variable für den Übertragungszustand
 is_transmitting = False
 
 style.use('fivethirtyeight')
 
-# Serielle Verbindung
-ser = serial.Serial('/dev/ttyACM0', 9600)
+if sys.platform.startswith('win'):
+    port = 'COM5'
+elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+    port = '/dev/ttyACM0'  # Beispiel für Linux/Mac, passen Sie dies an Ihren tatsächlichen Port an
+else:
+    raise EnvironmentError('Unsupported platform')
+
+ser = serial.Serial(port, 9600)
+
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+# Listen für die Anzeige
 times, graph_times, temperatures, humidities = [], [], [], []
+# Listen für die Datenspeicherung (alle Einträge innerhalb einer Minute)
+storage_times, storage_graph_times, storage_temperatures, storage_humidities = [], [], [], []
+last_record_time = None  # Speichert den Zeitstempel des zuletzt gespeicherten Datensatzes
+
 
 last_save_time = datetime.datetime.now()
 
 def save_data():
-    global temperatures, humidities, times
-    filename = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.csv")
+    global storage_times, storage_temperatures, storage_humidities
+    filename = datetime.datetime.now().strftime("%Y-%m-%d %H_%M_%S.csv")
     with open(filename, 'w') as file:
         file.write("Zeitstempel,Temperatur,Feuchtigkeit\n")  # Kopfzeile für die CSV-Datei
-        for time, temp, humidity in zip(times, temperatures, humidities):
+        for time, temp, humidity in zip(storage_times, storage_temperatures, storage_humidities):
             file.write(f"{time},{temp},{humidity}\n")
     print(f"Daten gespeichert in: {filename}")
 
 def animate(i):
-    global times, graph_times, temperatures, humidities, last_save_time
+    global last_record_time, last_save_time, times, graph_times, temperatures, humidities, storage_times, storage_graph_times, storage_temperatures, storage_humidities
     current_time = datetime.datetime.now()
 
     if ser.in_waiting > 0:
@@ -46,11 +57,22 @@ def animate(i):
             temperatures.append(temperature)
             humidities.append(humidity)
 
+            # Überprüfen, ob diese Daten in einer neuen Sekunde aufgenommen wurden
+            if last_record_time is None or last_record_time != now_for_file:
+                last_record_time = now_for_file  # Aktualisieren des letzten Aufzeichnungszeitpunkts
+
+
             # Beschränken der Datenpunkte auf die letzten 60 Einträge
-            graph_times = graph_times[-20:]
-            times = times[-20:]
-            temperatures = temperatures[-20:]
-            humidities = humidities[-20:]
+            graph_times = graph_times[-15:]
+            times = times[-15:]
+            temperatures = temperatures[-15:]
+            humidities = humidities[-15:]
+
+            # Aktualisierung der Speicherlisten (alle Datenpunkte)
+            storage_graph_times.append(now_for_graph)
+            storage_times.append(now_for_file)
+            storage_temperatures.append(temperature)
+            storage_humidities.append(humidity)
 
             # Aktualisieren Sie die Graphen entsprechend
             ax1.clear()
@@ -72,15 +94,12 @@ def animate(i):
             if (current_time - last_save_time).seconds >= 60:
                 save_data()
                 last_save_time = current_time
-                temperatures = []
-                humidities = []
-                times = []  # Leeren Sie die Liste, um sicherzustellen, dass die Datei korrekt gespeichert wird
-                graph_times = []
+                storage_times, storage_graph_times, storage_temperatures, storage_humidities = [], [], [], []
         except ValueError:
             pass  # Ignoriert fehlerhafte Datenzeilen
 
 
-ani = animation.FuncAnimation(fig, animate, interval=1000)
+ani = animation.FuncAnimation(fig, animate, interval=100)
 
 def send_data():
     if is_transmitting:
@@ -93,7 +112,7 @@ def send_data():
         
         print(f"Temp Slider: {temp}, Humid Slider: {humid}")
         
-        root.after(1000, send_data)  
+        root.after(100, send_data)  
 
 def toggle_transmission():
     global is_transmitting
@@ -125,9 +144,9 @@ def create_gui():
     humid_slider.pack(pady=10)
 
     # Labels für die Anzeige der aktuellen Werte
-    temp_label = ttk.Label(root, text="Temperatur: 25 °C")
+    temp_label = ttk.Label(root, text="Temperatur: 0 °C")
     temp_label.pack()
-    humid_label =ttk.Label(root, text="Feuchtigkeit: 50 %")
+    humid_label =ttk.Label(root, text="Feuchtigkeit: 0 %")
     humid_label.pack()
 
     # Button zum Senden der Werte
