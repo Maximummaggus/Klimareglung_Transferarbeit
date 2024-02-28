@@ -4,6 +4,14 @@
 # Erlaube keine Verzeichnisse
 !*/
 
-# Aber behalte diese spezifischen Dateien
+# Aber behalte das Verzeichnis Pi_Transfer und alles darin
+!Pi_Transfer/
+
+# Innerhalb von Pi_Transfer, ignoriere wieder alles...
+Pi_Transfer/*
+
+# ...außer der Pi_Transfer.ino Datei
+!Pi_Transfer/Pi_Transfer.ino
+
+# Behalte die Daten_Auswertung_toggle.py Datei
 !Daten_Auswertung_toggle.py
-!Pi_Transfer.ino
