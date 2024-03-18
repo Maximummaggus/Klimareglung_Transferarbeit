@@ -12,18 +12,18 @@ const int greenLedPin = 7;         // Grüne LED für "zu kalt"
 LiquidCrystal_I2C lcd(0x27, 16, 2);  // Adresse, Zeichen pro Zeile, Anzahl der Zeilen
 
 // Globale Variablen für Temperatur und Feuchtigkeit
-float temperature = 0.0;
-float humidity = 0.0;
+float currentTemperature = 0.0;
+float currentHumidity = 0.0;
 
-unsigned long previousMillis = 0;
-unsigned long lastUpdate = 0;            // Hinzugefügte Zeile: Initialisierung der lastUpdate Variable
-const long interval = 1000;              // Zeitintervall für das Abtasten des Feuchtigkeitssensors
-const long updateInterval = 500;         // Aktualisierungsintervall für das LCD in Millisekunden
-bool receivedDataRecently = false;       // Flag, um zu markieren, dass kürzlich Daten empfangen wurden
-unsigned long lastDataReceivedTime = 0;  // Zeitpunkt des letzten Datenempfangs
-const long dataReceivedTimeout = 1000;   // Zeit in Millisekunden, nach der das Flag zurückgesetzt wird
-unsigned long lastSendTime = 0;
-const long sendInterval = 1000; // Sendeintervall in Millisekunden
+unsigned long lastMoistureReadTime = 0;
+unsigned long lastLCDUpdateTime = 0;            // Hinzugefügte Zeile: Initialisierung der lastUpdate Variable
+const long moistureSensorReadInterval = 1000;              // Zeitintervall für das Abtasten des Feuchtigkeitssensors
+const long lcdUpdateInterval = 1000;         // Aktualisierungsintervall für das LCD in Millisekunden
+bool serialDataReciveFlag = false;       // Flag, um zu markieren, dass kürzlich Daten empfangen wurden
+unsigned long lastSerialDataReceivedTime = 0;  // Zeitpunkt des letzten Datenempfangs
+const long serialDataTimeout = 1000;   // Zeit in Millisekunden, nach der das Flag zurückgesetzt wird
+unsigned long lastSensorDataSendTime = 0;
+const long sensorDataSendInterval = 1000; // Sendeintervall in Millisekunden
 
 // Definition des Zustands-Enums vor setup()
 enum LedState {
@@ -51,36 +51,36 @@ void setup() {
 void loop() {
   unsigned long currentMillis = millis();
 
-  if (receivedDataRecently && (currentMillis - lastDataReceivedTime > dataReceivedTimeout)) {
+  if (serialDataReciveFlag && (currentMillis - lastSerialDataReceivedTime > serialDataTimeout)) {
     // Wenn seit dem letzten Empfang von Daten genug Zeit vergangen ist, zurücksetzen
-    receivedDataRecently = false;
+    serialDataReciveFlag = false;
   }
 
   if (Serial.available() > 0) {
     readAndProcessSerialData();
-    receivedDataRecently = true;
-    lastDataReceivedTime = currentMillis;
-  } else if (!receivedDataRecently) {
+    serialDataReciveFlag = true;
+    lastSerialDataReceivedTime = currentMillis;
+  } else if (!serialDataReciveFlag) {
     // Nur Sensordaten lesen, wenn kürzlich keine Daten empfangen wurden
     readSensorsAndUpdate(currentMillis);
   }
   // Aktualisiere die Anzeige nur, wenn das festgelegte Intervall abgelaufen ist
   updateDisplayIfNeeded(currentMillis);
-  updateRelay(temperature);
-  updateLedStateMachine(temperature, humidity, currentMillis);
+  updateRelay(currentTemperature);
+  updateLedStateMachine(currentTemperature, currentHumidity, currentMillis);
 
 
-  if (currentMillis - lastSendTime >= sendInterval) {
+  if (currentMillis - lastSensorDataSendTime >= sensorDataSendInterval) {
     sendSensorData();
-    lastSendTime = currentMillis;
+    lastSensorDataSendTime = currentMillis;
   }
 }
 
 void readSensorsAndUpdate(unsigned long currentMillis) {
-  temperature = readTemperatureSensor();
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    humidity = readMoistureSensor();
+  currentTemperature = readTemperatureSensor();
+  if (currentMillis - lastMoistureReadTime >= moistureSensorReadInterval) {
+    lastMoistureReadTime = currentMillis;
+    currentHumidity = readMoistureSensor();
   }
 }
 
@@ -98,23 +98,23 @@ float readMoistureSensor() {
 
 // Aktualisiere LCD-Anzeige mit den zuletzt gelesenen oder empfangenen Werten
 void updateDisplayIfNeeded(unsigned long currentMillis) {
-  if (currentMillis - lastUpdate >= updateInterval) {
-    lastUpdate = currentMillis;
+  if (currentMillis - lastLCDUpdateTime >= lcdUpdateInterval) {
+    lastLCDUpdateTime = currentMillis;
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Temp: ");
-    lcd.print(temperature);
+    lcd.print(currentTemperature);
     lcd.print(" C");
     lcd.setCursor(0, 1);
     lcd.print("Feucht: ");
-    lcd.print(humidity);
+    lcd.print(currentHumidity);
     lcd.print(" %");
   }
 }
 void sendSensorData() {
-  Serial.print(temperature);
+  Serial.print(currentTemperature);
   Serial.print(",");
-  Serial.println(humidity);
+  Serial.println(currentHumidity);
 }
 
 void updateLedStateMachine(float temperature, float humidity, unsigned long currentMillis) {
@@ -149,16 +149,19 @@ void updateLedStateMachine(float temperature, float humidity, unsigned long curr
     digitalWrite(yellowLedPin, LOW);
     digitalWrite(redLedPin, LOW);
 
-    switch (currentState) {
-      case LED_GREEN:
-        digitalWrite(greenLedPin, HIGH);
-        break;
-      case LED_YELLOW:
-        digitalWrite(yellowLedPin, HIGH);
-        break;
-      case LED_RED:
-        digitalWrite(redLedPin, HIGH);
-        break;
+switch (currentState) {
+  case LED_GREEN:
+    digitalWrite(greenLedPin, HIGH);
+    break;
+  case LED_YELLOW:
+    digitalWrite(yellowLedPin, HIGH);
+    break;
+  case LED_RED:
+    digitalWrite(redLedPin, HIGH);
+    break;
+  case LED_OFF:
+    // Keine Aktion erforderlich für LED_OFF
+    break;
     }
   }
 }
@@ -204,10 +207,11 @@ bool readAndProcessSerialData() {
     if (tIndex != -1 && hIndex != -1) {
       String tempStr = received.substring(tIndex + 1, hIndex);
       String humidStr = received.substring(hIndex + 1);
-      temperature = tempStr.toFloat();
-      humidity = humidStr.toFloat();
+      currentTemperature = tempStr.toFloat();
+      currentHumidity = humidStr.toFloat();
       return true;  // Daten wurden empfangen und verarbeitet
     }
-    return false;  // Keine Daten verfügbar
+    return false;  // Bedingungen nicht erfüllt, keine Daten verarbeitet
   }
+  return false; // Keine Daten verfügbar
 }
