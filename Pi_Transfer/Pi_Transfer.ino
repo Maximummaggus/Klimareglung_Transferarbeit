@@ -67,7 +67,8 @@ void loop() {
   // Aktualisiere die Anzeige nur, wenn das festgelegte Intervall abgelaufen ist
   updateDisplayIfNeeded(currentMillis);
   updateRelay(temperature);
-  updateLedStateMachine(temperature, humidity);
+  updateLedStateMachine(temperature, humidity, currentMillis);
+
 
   if (currentMillis - lastSendTime >= sendInterval) {
     sendSensorData();
@@ -115,8 +116,8 @@ void sendSensorData() {
   Serial.print(",");
   Serial.println(humidity);
 }
-void updateLedStateMachine(float temperature, float humidity) {
-  unsigned long currentMillis = millis();
+
+void updateLedStateMachine(float temperature, float humidity, unsigned long currentMillis) {
   static unsigned long lastTransitionTime = 0;
   const long transitionInterval = 1000;  // Zeitintervall zwischen Zustandsübergängen
 
@@ -161,20 +162,23 @@ void updateLedStateMachine(float temperature, float humidity) {
     }
   }
 }
-void updateRelay(float temperature) {
-  static bool relayState = false;                // Behält den Zustand zwischen Aufrufen bei
-  static unsigned long lastRelayToggleTime = 0;  // Zeitpunkt des letzten Zustandswechsels
 
+void updateRelay(float temperature) {
+  static bool relayState = false;  // Behält den Zustand zwischen Aufrufen bei
+  
   const float temperatureThresholdHigh = 22.0;  // Obere Temperaturgrenze
   const float temperatureThresholdLow = 18.0;   // Untere Temperaturgrenze
   const float hysteresis = 1.0;                 // Hysterese
-  const long relayToggleInterval = 1000;        // Mindestintervall zwischen Zustandsänderungen
-
-  unsigned long currentMillis = millis();
 
   // Bestimmen, ob eine Zustandsänderung erforderlich ist
   bool needsToTurnOn = temperature > temperatureThresholdHigh + hysteresis || temperature < temperatureThresholdLow - hysteresis;
   bool needsToTurnOff = temperature >= temperatureThresholdLow + hysteresis && temperature <= temperatureThresholdHigh - hysteresis;
+
+  if (!needsToTurnOn && !needsToTurnOff) return; // Keine Aktion erforderlich
+
+  static unsigned long lastRelayToggleTime = 0;  // Zeitpunkt des letzten Zustandswechsels
+  const long relayToggleInterval = 1000;         // Mindestintervall zwischen Zustandsänderungen
+  unsigned long currentMillis = millis();
 
   // Überprüfen, ob seit der letzten Änderung genügend Zeit vergangen ist
   bool isTimeForChange = currentMillis - lastRelayToggleTime > relayToggleInterval;
@@ -191,6 +195,7 @@ void updateRelay(float temperature) {
     }
   }
 }
+
 bool readAndProcessSerialData() {
   if (Serial.available() > 0) {
     String received = Serial.readStringUntil('\n');
