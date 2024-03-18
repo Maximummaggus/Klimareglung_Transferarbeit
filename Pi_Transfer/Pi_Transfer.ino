@@ -85,13 +85,14 @@ void readSensorsAndUpdate(unsigned long currentMillis) {
 
 float readTemperatureSensor() {
   int tempValue = analogRead(tempSensorPin);
-  return map(tempValue, 0, 370, -50, 150);  // Annahme der Umrechnung
+  return map(tempValue, 0, 400, -50, 150);  // Annahme der Umrechnung
 }
 
 float readMoistureSensor() {
   int moistureValue = analogRead(moistureSensorPin);
   return map(moistureValue, 0, 800, 0, 100);  // Annahme der Umrechnung
 }
+
 
 
 // Aktualisiere LCD-Anzeige mit den zuletzt gelesenen oder empfangenen Werten
