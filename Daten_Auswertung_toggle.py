@@ -136,11 +136,11 @@ def create_gui():
     root.title("Sensor Simulierung")
 
     # Schieberegler für die Temperatur
-    temp_slider = ttk.Scale(root, from_=10, to=40, orient='horizontal', length=200, command=update_labels)
+    temp_slider = ttk.Scale(root, from_=0, to=40, orient='horizontal', length=300, command=update_labels)
     temp_slider.pack(pady=40)
 
     # Schieberegler für die Feuchtigkeit
-    humid_slider = ttk.Scale(root, from_=0, to=100, orient='horizontal', length=200, command=update_labels)
+    humid_slider = ttk.Scale(root, from_=0, to=100, orient='horizontal', length=300, command=update_labels)
     humid_slider.pack(pady=40)
 
     # Labels für die Anzeige der aktuellen Werte

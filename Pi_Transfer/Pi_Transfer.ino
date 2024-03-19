@@ -5,9 +5,9 @@
 const int tempSensorPin = A0;      // Temperatursensor
 const int moistureSensorPin = A1;  // Feuchtigkeitssensor
 const int relayPin = 2;            // Relais für Klimaanlagensteuerung
-const int redLedPin = 5;           // Rote LED für "zu warm"
-const int yellowLedPin = 6;        // Gelbe LED für "angenehm"
-const int greenLedPin = 7;         // Grüne LED für "zu kalt"
+const int redLedPin = 5;           // Rote LED
+const int yellowLedPin = 6;        // Gelbe LED
+const int greenLedPin = 7;         // Grüne LED
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);  // Adresse, Zeichen pro Zeile, Anzahl der Zeilen
 
@@ -16,7 +16,7 @@ float currentTemperature = 0.0;
 float currentHumidity = 0.0;
 
 unsigned long lastMoistureReadTime = 0;
-unsigned long lastLCDUpdateTime = 0;            // Hinzugefügte Zeile: Initialisierung der lastUpdate Variable
+unsigned long lastLCDUpdateTime = 0;            // Initialisierung der lastUpdate Variable
 const long moistureSensorReadInterval = 1000;              // Zeitintervall für das Abtasten des Feuchtigkeitssensors
 const long lcdUpdateInterval = 1000;         // Aktualisierungsintervall für das LCD in Millisekunden
 bool serialDataReciveFlag = false;       // Flag, um zu markieren, dass kürzlich Daten empfangen wurden
@@ -104,6 +104,7 @@ void updateDisplayIfNeeded(unsigned long currentMillis) {
     lcd.setCursor(0, 0);
     lcd.print("Temp: ");
     lcd.print(currentTemperature);
+    lcd.write(byte(223)); // Gradzeichen
     lcd.print(" C");
     lcd.setCursor(0, 1);
     lcd.print("Feucht: ");
