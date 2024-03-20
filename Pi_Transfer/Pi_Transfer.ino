@@ -105,7 +105,7 @@ void updateDisplayIfNeeded(unsigned long currentMillis) {
     lcd.print("Temp: ");
     lcd.print(currentTemperature);
     lcd.write(byte(223)); // Gradzeichen
-    lcd.print(" C");
+    lcd.print("C");
     lcd.setCursor(0, 1);
     lcd.print("Feucht: ");
     lcd.print(currentHumidity);
